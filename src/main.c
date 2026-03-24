@@ -3,8 +3,10 @@
 //
 #include <stdio.h>
 #include "graph.h"
+#include <time.h>
 
 int main() {
+    srand(time(NULL));
     const char* filename = "../data/toyexample.out";
 
     int max_node = get_max_node(filename);

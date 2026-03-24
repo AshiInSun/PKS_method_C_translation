@@ -69,6 +69,7 @@ void init_neighbors(Graph* g, const int size);
 
 void add_edge_to_neighbors(Graph* g, int u, int v);
 void add_edge(Graph* g, int u, int v);
+bool isEdgeEqual(Edge e, Edge f);
 
 // =====================
 // Lecture de fichiers

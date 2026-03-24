@@ -71,58 +71,150 @@ void add_edge_to_neighbors(Graph* g, int u, int v) {
 }
 
 void add_edge(Graph* g, int u, int v) {
-    if(g->is_directed)
-    {
+    if (g->is_directed) {
 
-    }else{
-        if (u > v) {
-            int tmp = u;
-            u = v;
-            v = tmp;
+        // on fera plus tard
+
+    } else {
+
+        // normaliser pour unique_edges : u < v
+        int u_norm = u;
+        int v_norm = v;
+
+        if (u_norm > v_norm) {
+            int tmp = u_norm;
+            u_norm = v_norm;
+            v_norm = tmp;
         }
 
-        Edge key = {u, v};
-        Edge_undirected* e;
+        Edge key_unique = {u_norm, v_norm};
+        Edge_undirected* e_check;
 
-        int pos = -1;
-        for (int i = 0; i < g->neighbors[u].count; i++) {
-            if (g->neighbors[u].nodes[i] == v) {
-                pos = i;
-                break;
-            }
-        }
-        if (pos == -1) {
-            fprintf(stderr, "Error: edge (%d, %d) not found in neighbors\n", u, v);
+        // vérifier si l'arête unique existe déjà
+        HASH_FIND(hh, g->edges_undirected,
+                  &key_unique, sizeof(Edge), e_check);
+
+        if (e_check != NULL) {
+            // edge déjà présente
             return;
         }
 
-        // vérifier si existe
-        HASH_FIND(hh, g->edges_undirected, &key, sizeof(Edge), e);
-        if (e != NULL) return;
+        // -----------------------------
+        // trouver position de v dans neighbors[u]
+        // -----------------------------
 
-        // créer nouvelle arête
-        e = malloc(sizeof(Edge_undirected));
-        if (!e) { perror("malloc"); exit(1); }
-        e->e.u = u;
-        e->e.v = v;
-        e->v_position_in_u = pos;
-        // redimensionner si nécessaire
+        int pos_uv = -1;
+        for (int i = 0; i < g->neighbors[u].count; i++) {
+            if (g->neighbors[u].nodes[i] == v) {
+                pos_uv = i;
+                break;
+            }
+        }
+
+        if (pos_uv == -1) {
+            fprintf(stderr,
+                    "Error: edge (%d, %d) not found in neighbors\n",
+                    u, v);
+            return;
+        }
+
+        // -----------------------------
+        // trouver position de u dans neighbors[v]
+        // -----------------------------
+
+        int pos_vu = -1;
+        for (int i = 0; i < g->neighbors[v].count; i++) {
+            if (g->neighbors[v].nodes[i] == u) {
+                pos_vu = i;
+                break;
+            }
+        }
+
+        if (pos_vu == -1) {
+            fprintf(stderr,
+                    "Error: edge (%d, %d) not found in neighbors\n",
+                    v, u);
+            return;
+        }
+
+        // -----------------------------
+        // gérer unique_edges (tableau dynamique)
+        // -----------------------------
+
         if (g->unique_capacity == 0) {
             g->unique_capacity = 4;
-            g->unique_edges = malloc(g->unique_capacity * sizeof(Edge));
-            if (!g->unique_edges) { perror("malloc"); exit(1); }
-        }
-        else if (g->unique_count == g->unique_capacity) {
+
+            g->unique_edges =
+                    malloc(g->unique_capacity * sizeof(Edge));
+
+            if (!g->unique_edges) {
+                perror("malloc");
+                exit(1);
+            }
+
+        } else if (g->unique_count == g->unique_capacity) {
+
             g->unique_capacity *= 2;
-            Edge* tmp = realloc(g->unique_edges, g->unique_capacity * sizeof(Edge));
-            if (!tmp) { perror("realloc"); exit(1); }
+
+            Edge* tmp =
+                    realloc(g->unique_edges,
+                            g->unique_capacity * sizeof(Edge));
+
+            if (!tmp) {
+                perror("realloc");
+                exit(1);
+            }
+
             g->unique_edges = tmp;
         }
+
+        // ajouter arête unique
+        g->unique_edges[g->unique_count++] = key_unique;
         g->M++;
-        Edge unique = key;
-        g->unique_edges[g->unique_count++] = unique;
-        // ajouter dans la hash table
-        HASH_ADD(hh, g->edges_undirected, e, sizeof(Edge), e);
+
+        // -----------------------------
+        // ajouter (u,v) dans hash table
+        // -----------------------------
+
+        Edge_undirected* e_uv =
+                malloc(sizeof(Edge_undirected));
+
+        if (!e_uv) {
+            perror("malloc");
+            exit(1);
+        }
+
+        e_uv->e.u = u;
+        e_uv->e.v = v;
+        e_uv->v_position_in_u = pos_uv;
+
+        HASH_ADD(hh,
+                 g->edges_undirected,
+                 e,
+                 sizeof(Edge),
+                 e_uv);
+
+        // -----------------------------
+        // ajouter (v,u) dans hash table
+        // -----------------------------
+
+        Edge_undirected* e_vu =
+                malloc(sizeof(Edge_undirected));
+
+        if (!e_vu) {
+            perror("malloc");
+            exit(1);
+        }
+
+        e_vu->e.u = v;
+        e_vu->e.v = u;
+        e_vu->v_position_in_u = pos_vu;
+
+        HASH_ADD(hh,
+                 g->edges_undirected,
+                 e,
+                 sizeof(Edge),
+                 e_vu);
     }
 }
 
